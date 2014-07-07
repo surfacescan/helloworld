@@ -1,9 +1,47 @@
 // Set up a collection to contain player information. On the server,
 // it is backed by a MongoDB collection named "players".
 
+
 Players = new Meteor.Collection("players");
 
+
+if(Meteor.isServer){
+Meteor.methods({
+
+   getWeather: function(city, country){
+
+      var Future = Meteor.require('future');
+      var myFuture = new Future();
+      console.log(myFuture);
+
+var weather_result = Async.runSync(function(done) {
+
+      Meteor.http.get("http://api.coindesk.com/v1/bpi/currentprice.json", function (error, result) {
+      //Meteor.http.get("http://api.openweathermap.org/data/2.5/weather?q=" + city + "," + country, function (error, result) {
+if(error) {
+    console.log('http get FAILED!');
+} else {
+    console.log('http get SUCCES');
+    if (result.statusCode === 200) {
+        console.log('Status code = 200!');
+        console.log(result.content);
+    }
+    done(null,result);
+}
+});
+});
+    return JSON.parse(weather_result.result.content).bpi.USD.rate;
+
+    }
+});
+}
+
 if (Meteor.isClient) {
+
+  Template.leaderboard.weather = function (){
+    return Session.get('weather');
+  };
+
   Template.leaderboard.players = function () {
     return Players.find({}, {sort: {score: -1, name: 1}});
   };
@@ -26,6 +64,13 @@ if (Meteor.isClient) {
   Template.player.events({
     'click': function () {
       Session.set("selected_player", this._id);
+      
+      Meteor.call('getWeather', 'Berlin', 'Germany', function(err, data) {
+         if (err)
+            console.log(err);
+         console.log("here it comes..." + data);
+         Session.set('weather', data);
+      });
     }
   });
 }
@@ -45,3 +90,4 @@ if (Meteor.isServer) {
     }
   });
 }
+// it is backed by a MongoDB collection named "players".
